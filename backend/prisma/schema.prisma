@@ -1,0 +1,176 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             Int      @id @default(autoincrement())
+  email          String   @unique
+  passwordHash   String
+  name           String
+  role           String
+  department     String?
+  avatarUrl      String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  createdMocs    Moc[]    @relation("Requester")
+  acceptedMocs   Moc[]    @relation("Acceptor")
+  ownedMocs      Moc[]    @relation("Owner")
+  actions        Action[]
+  approvals      Approval[]
+  auditLogs      AuditLog[]
+  notifications  Notification[]
+}
+
+model Moc {
+  id              Int             @id @default(autoincrement())
+  title           String
+  description     String
+  changeType      String
+  location        String?
+  responsibleArea String?
+  justification   String
+  status          String          @default("DRAFT")
+  riskLevel       String?
+  requestedDate   DateTime        @default(now())
+  acceptedAt      DateTime?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  requesterId     Int
+  requester       User            @relation("Requester", fields: [requesterId], references: [id])
+  acceptorId      Int?
+  acceptor        User?           @relation("Acceptor", fields: [acceptorId], references: [id])
+  ownerId         Int?
+  owner           User?           @relation("Owner", fields: [ownerId], references: [id])
+
+  attachments     Attachment[]
+  riskAssessments RiskAssessment[]
+  actions         Action[]
+  approvals       Approval[]
+  pssrItems       PssrItem[]
+  closureInfo     ClosureInfo?
+  auditLogs       AuditLog[]
+  notifications   Notification[]
+}
+
+model Attachment {
+  id          Int      @id @default(autoincrement())
+  fileName    String
+  fileType    String
+  fileSize    Int
+  fileUrl     String
+  uploadedAt  DateTime @default(now())
+
+  mocId       Int
+  moc         Moc      @relation(fields: [mocId], references: [id], onDelete: Cascade)
+}
+
+model RiskAssessment {
+  id          Int      @id @default(autoincrement())
+  hazard      String
+  consequence String
+  probability Int
+  severity    Int
+  riskScore   Int
+  riskLevel   String
+  mitigation  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  mocId       Int
+  moc         Moc      @relation(fields: [mocId], references: [id], onDelete: Cascade)
+
+  @@map("risk_assessments")
+}
+
+model Action {
+  id            Int      @id @default(autoincrement())
+  description   String
+  startDate     DateTime?
+  endDate       DateTime?
+  status        String   @default("PENDING")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  mocId         Int
+  moc           Moc      @relation(fields: [mocId], references: [id], onDelete: Cascade)
+  responsibleId Int
+  responsible   User     @relation(fields: [responsibleId], references: [id])
+}
+
+model Approval {
+  id            Int      @id @default(autoincrement())
+  comments      String?
+  isApproved    Boolean
+  approvalOrder Int
+  approvedAt    DateTime @default(now())
+
+  mocId         Int
+  moc           Moc      @relation(fields: [mocId], references: [id], onDelete: Cascade)
+  approverId    Int
+  approver      User     @relation(fields: [approverId], references: [id])
+}
+
+model PssrItem {
+  id          Int      @id @default(autoincrement())
+  description String
+  isCompleted Boolean  @default(false)
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  mocId       Int
+  moc         Moc      @relation(fields: [mocId], references: [id], onDelete: Cascade)
+}
+
+model ClosureInfo {
+  id             Int      @id @default(autoincrement())
+  result         String
+  issuesFound    String?
+  lessonsLearned String?
+  closedAt       DateTime @default(now())
+
+  mocId          Int      @unique
+  moc            Moc      @relation(fields: [mocId], references: [id], onDelete: Cascade)
+
+  @@map("closure_info")
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  type      String
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mocId     Int?
+  moc       Moc?     @relation(fields: [mocId], references: [id])
+}
+
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  action     String
+  entityType String
+  entityId   Int?
+  details    String?
+  createdAt  DateTime @default(now())
+
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id])
+  mocId      Int?
+  moc        Moc?     @relation(fields: [mocId], references: [id])
+
+  @@map("audit_logs")
+}
