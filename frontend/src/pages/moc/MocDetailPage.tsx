@@ -26,7 +26,7 @@ const statusBadge: Record<string, string> = {
   REJECTED: 'badge-danger', CANCELLED: 'badge-danger',
 };
 
-type Tab = 'detalhes' | 'riscos' | 'acoes' | 'pssr' | 'aprovacoes' | 'auditoria';
+type Tab = 'detalhes' | 'riscos' | 'acoes' | 'pssr' | 'aprovacoes' | 'anexos' | 'auditoria';
 
 export function MocDetailPage() {
   const { id } = useParams();
@@ -253,6 +253,7 @@ export function MocDetailPage() {
     { key: 'acoes', label: 'Ações' },
     { key: 'pssr', label: 'PSSR' },
     { key: 'aprovacoes', label: 'Aprovações' },
+    { key: 'anexos', label: 'Anexos' },
     { key: 'auditoria', label: 'Auditoria' },
   ];
 
@@ -266,10 +267,21 @@ export function MocDetailPage() {
           </div>
           <h1 className="page-title">{moc.title}</h1>
         </div>
-        <span className={`badge ${statusBadge[moc.status] || 'badge-draft'}`}>
-          <span className="badge-dot" />
-          {statusLabels[moc.status]}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {moc.status === 'DRAFT' && (isRequester || isAdmin) && (
+            <button className="btn btn-outline btn-lg" onClick={() => navigate(`/mocs/${id}/edit`)}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+              Editar
+            </button>
+          )}
+          <span className={`badge ${statusBadge[moc.status] || 'badge-draft'}`}>
+            <span className="badge-dot" />
+            {statusLabels[moc.status]}
+          </span>
+        </div>
       </div>
 
       {error && <div className="toast toast-error">{error}</div>}
@@ -289,6 +301,7 @@ export function MocDetailPage() {
       {tab === 'acoes' && <ActionsPlanSection mocId={moc.id} canEdit={canEdit} />}
       {tab === 'pssr' && <PssrSection mocId={moc.id} canEdit={canEdit} />}
       {tab === 'aprovacoes' && <ApprovalSection mocId={moc.id} canApprove={isApprover} />}
+      {tab === 'anexos' && <AttachmentsTab mocId={moc.id} />}
       {tab === 'auditoria' && <AuditTab mocId={moc.id} />}
     </div>
   );
@@ -349,6 +362,95 @@ function DetailsTab({ moc }: { moc: any }) {
           <p style={{ fontSize: 14, color: '#166534' }}><strong>Data:</strong> {new Date(moc.closureInfo.closedAt).toLocaleString('pt-BR')}</p>
         </div>
       )}
+    </div>
+  );
+}
+
+function AttachmentsTab({ mocId }: { mocId: number }) {
+  const { data: attachments, isLoading } = useQuery({
+    queryKey: ['attachments', mocId],
+    queryFn: () => fetch(`/api/v1/mocs/${mocId}/attachments`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('@moc:token')}` },
+    }).then((r) => r.json()),
+  });
+  const queryClient = useQueryClient();
+  const [uploading, setUploading] = useState(false);
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      await fetch(`/api/v1/mocs/${mocId}/attachments`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${localStorage.getItem('@moc:token')}` },
+        body: form,
+      });
+      queryClient.invalidateQueries({ queryKey: ['attachments', mocId] });
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleDelete(id: number) {
+    await fetch(`/api/v1/mocs/${mocId}/attachments/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${localStorage.getItem('@moc:token')}` },
+    });
+    queryClient.invalidateQueries({ queryKey: ['attachments', mocId] });
+  }
+
+  return (
+    <div className="card">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--gray-700)' }}>Anexos</h3>
+        <label className="btn btn-primary btn-sm" style={{ cursor: 'pointer' }}>
+          {uploading ? 'Enviando...' : '+ Upload'}
+          <input type="file" onChange={handleUpload} hidden disabled={uploading} />
+        </label>
+      </div>
+
+      {isLoading && <div className="skeleton" style={{ height: 40 }} />}
+
+      {attachments?.length === 0 && (
+        <p style={{ color: 'var(--gray-400)', fontSize: 14 }}>
+          Nenhum anexo. Clique em "+ Upload" para adicionar.
+        </p>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {attachments?.map((a: any) => (
+          <div key={a.id} style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            padding: '10px 14px', border: '1px solid var(--gray-200)',
+            borderRadius: 'var(--radius)',
+          }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--gray-400)" strokeWidth="2" width="18" height="18">
+              <path d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 500 }}>{a.fileName}</div>
+              <div style={{ fontSize: 12, color: 'var(--gray-400)' }}>
+                {(a.fileSize / 1024).toFixed(1)} KB
+              </div>
+            </div>
+            <a
+              href={`/api/v1/mocs/${mocId}/attachments/${a.id}/download`}
+              className="btn btn-outline btn-sm"
+              style={{ textDecoration: 'none' }}
+              download
+            >
+              Download
+            </a>
+            <button className="btn btn-danger btn-sm" onClick={() => handleDelete(a.id)}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

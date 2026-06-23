@@ -7,7 +7,7 @@ Sistema web para controle, aprovação, implementação e encerramento de mudan�
 - **Frontend:** React 19 + TypeScript + Vite
 - **Backend:** NestJS + TypeScript
 - **ORM:** Prisma
-- **Banco:** PostgreSQL
+- **Banco:** SQLite
 - **Autenticação:** JWT
 
 ## Estrutura
@@ -16,7 +16,6 @@ Sistema web para controle, aprovação, implementação e encerramento de mudan�
 MOC/
 ├── backend/          # API NestJS
 ├── frontend/         # App React
-├── database/         # Docker Compose
 └── docs/             # Documentação
 ```
 
@@ -38,20 +37,19 @@ MOC/
 ## Quick Start
 
 ```bash
-# 1. Subir PostgreSQL
-cd database && docker compose up -d
-
-# 2. Backend
+# 1. Backend
 cd backend
+cp .env.example .env
 npm install
-npx prisma migrate dev --name init
+npx prisma generate
+npx prisma db push
 npx prisma db seed
 npm run start:dev
 
-# 3. Frontend
+# 2. Frontend
 cd frontend
 npm install
-npm run dev
+npm run dev -- --host 0.0.0.0
 ```
 
 Acesse `http://localhost:5173` — login padrão: `admin@moc.com` / `123456`
@@ -59,3 +57,14 @@ Acesse `http://localhost:5173` — login padrão: `admin@moc.com` / `123456`
 ## Fluxo Completo
 
 Solicitação → Aceitação → Avaliação de Risco → Plano de Implementação → Aprovação → Implementação → PSSR → Validação → Encerramento
+
+## Contas de Teste
+
+| Email | Role | Senha |
+|-------|------|-------|
+| admin@moc.com | ADMIN | 123456 |
+| acceptor@moc.com | CHANGE_ACCEPTOR | 123456 |
+| requester@moc.com | REQUESTER | 123456 |
+| approver@moc.com | CHANGE_APPROVER | 123456 |
+| owner@moc.com | CHANGE_OWNER | 123456 |
+| reviewer@moc.com | REVIEWER | 123456 |

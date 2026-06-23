@@ -1,9 +1,13 @@
-import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, type FormEvent } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { mocApi } from '../../api/moc';
 
 export function MocFormPage() {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const isEdit = !!id;
+
   const [form, setForm] = useState({
     title: '', description: '', changeType: '',
     location: '', responsibleArea: '', justification: '',
@@ -11,15 +15,39 @@ export function MocFormPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const { data: existing } = useQuery({
+    queryKey: ['moc', Number(id)],
+    queryFn: () => mocApi.getById(Number(id)).then((r) => r.data),
+    enabled: isEdit,
+  });
+
+  useEffect(() => {
+    if (existing) {
+      setForm({
+        title: existing.title,
+        description: existing.description,
+        changeType: existing.changeType,
+        location: existing.location || '',
+        responsibleArea: existing.responsibleArea || '',
+        justification: existing.justification,
+      });
+    }
+  }, [existing]);
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      const { data } = await mocApi.create(form);
-      navigate(`/mocs/${data.id}`);
+      if (isEdit) {
+        await mocApi.update(Number(id), form);
+        navigate(`/mocs/${id}`);
+      } else {
+        const { data } = await mocApi.create(form);
+        navigate(`/mocs/${data.id}`);
+      }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Erro ao criar MOC');
+      setError(err.response?.data?.message || `Erro ao ${isEdit ? 'atualizar' : 'criar'} MOC`);
     } finally {
       setLoading(false);
     }
@@ -31,10 +59,12 @@ export function MocFormPage() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">Nova MOC</h1>
-          <p style={{ color: 'var(--gray-500)', fontSize: 14, marginTop: 2 }}>Preencha os dados da solicitação de mudança</p>
+          <h1 className="page-title">{isEdit ? 'Editar MOC' : 'Nova MOC'}</h1>
+          <p style={{ color: 'var(--gray-500)', fontSize: 14, marginTop: 2 }}>
+            {isEdit ? `Editando MOC #${id}` : 'Preencha os dados da solicitação de mudança'}
+          </p>
         </div>
-        <button className="btn btn-outline" onClick={() => navigate('/mocs')}>
+        <button className="btn btn-outline" onClick={() => navigate(isEdit ? `/mocs/${id}` : '/mocs')}>
           &larr; Voltar
         </button>
       </div>
@@ -78,11 +108,11 @@ export function MocFormPage() {
           </div>
 
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <button type="button" className="btn btn-outline btn-lg" onClick={() => navigate('/mocs')}>
+            <button type="button" className="btn btn-outline btn-lg" onClick={() => navigate(isEdit ? `/mocs/${id}` : '/mocs')}>
               Cancelar
             </button>
             <button type="submit" className="btn btn-primary btn-lg" disabled={loading}>
-              {loading ? 'Criando...' : 'Criar MOC'}
+              {loading ? 'Salvando...' : isEdit ? 'Salvar Alterações' : 'Criar MOC'}
             </button>
           </div>
         </form>

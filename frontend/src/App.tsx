@@ -93,6 +93,7 @@ function AppRoutes() {
       <Route path="/mocs" element={<ProtectedRoute><AppLayout><MocListPage /></AppLayout></ProtectedRoute>} />
       <Route path="/mocs/new" element={<ProtectedRoute><AppLayout><MocFormPage /></AppLayout></ProtectedRoute>} />
       <Route path="/mocs/:id" element={<ProtectedRoute><AppLayout><MocDetailPage /></AppLayout></ProtectedRoute>} />
+      <Route path="/mocs/:id/edit" element={<ProtectedRoute><AppLayout><MocFormPage /></AppLayout></ProtectedRoute>} />
       <Route path="/audit" element={<ProtectedRoute><AppLayout><AuditPage /></AppLayout></ProtectedRoute>} />
       <Route path="/notifications" element={<ProtectedRoute><AppLayout><NotificationsPage /></AppLayout></ProtectedRoute>} />
     </Routes>

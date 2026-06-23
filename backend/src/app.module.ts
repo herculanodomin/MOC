@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { MulterModule } from '@nestjs/platform-express';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { MocModule } from './moc/moc.module';
@@ -10,11 +11,13 @@ import { PssrModule } from './pssr/pssr.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { AuditModule } from './audit/audit.module';
+import { AttachmentsModule } from './attachments/attachments.module';
 import { PrismaModule } from './common/prisma.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    MulterModule.register({ dest: './uploads' }),
     PrismaModule,
     AuthModule,
     UsersModule,
@@ -26,6 +29,7 @@ import { PrismaModule } from './common/prisma.module';
     NotificationsModule,
     DashboardModule,
     AuditModule,
+    AttachmentsModule,
   ],
 })
 export class AppModule {}
